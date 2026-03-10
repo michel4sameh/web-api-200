@@ -2,11 +2,18 @@ using Scalar.Aspire;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
+// params are things that are going to be in your environment.
+// connection strings are handled , services are handled
+
+//var p1 = builder.AddParameter("secret-word", true);
+
 var scalar = builder.AddScalarApiReference(); // running a container and configuring it.
 var pgServer = builder.AddPostgres("pg-server") // so is this!
     .WithLifetime(ContainerLifetime.Persistent);
 
 var softwareDb = pgServer.AddDatabase("software-db");
+    // this will be more complicated, probably. You'll need a database with a schema, maybe loaded with some "seed" data, etc.
+    // Scripts can be run, or other container images can be used.
 
 // Above this line is the "infra" stuff - or just development tools
 // All the stuff that will need to be in the environment where this is running.

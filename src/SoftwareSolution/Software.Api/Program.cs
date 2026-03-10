@@ -1,11 +1,12 @@
-using JasperFx.CommandLine.Descriptions;
+
 using Marten;
 using Software.Api.CatalogItems;
 using Software.Api.Clients;
+using Software.Api.Vendors;
 
 
 var builder = WebApplication.CreateBuilder(args);
-builder.AddNpgsqlDataSource("software-db"); 
+builder.AddNpgsqlDataSource("software-db"); // use the configuration api to find me the connection string for software-db
 builder.Services.AddValidation(); 
 builder.AddServiceDefaults(); 
 
@@ -42,10 +43,17 @@ builder.Services.AddMarten(options =>
 builder.Services.AddHttpClient<NotificationsApi>(client =>
 {
     // we prefer https, but we'll http if that is availble, and get the address for that api.
-    client.BaseAddress = new Uri("https+http://notification-api");
+    client.BaseAddress = new Uri("https+http://notification-api"); // "Service Discovery" - 
 });
 
+// this makes it so we can inject IOptions<BlockedVendorOptions> in our controllers, services, etc.
+builder.Services.Configure<BlockedVendorsOptions>(
+    builder.Configuration.GetSection(BlockedVendorsOptions.SectionName)
+    );
+
 builder.Services.AddScoped<IDoNotifications>(sp => sp.GetRequiredService<NotificationsApi>());
+builder.Services.AddScoped<VendorExistsFilter>(); // If you don't know what that means, ASK OR LOOK IT UP.
+
 var app = builder.Build();
 
 
@@ -59,8 +67,11 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// using reflection at startup to automatically "discover' all the controllers and build the route table.
+// Cannot do this if you are using AOT. (opposite of JIT) 
 app.MapControllers();
 
+// I prefer this because I use a lot of feature flags.
 app.MapCatalogItemRoutes();
 
 app.MapDefaultEndpoints(); // this comes from service defaults, and this is mostly health checks.
